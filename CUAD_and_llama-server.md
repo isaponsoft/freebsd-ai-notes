@@ -127,6 +127,12 @@ LD_PRELOAD="dummy-uvm.so" ./bin/llama-server \
     --host 0.0.0.0 --port 11434
 ```
 
+one liner
+ 
+```bash
+chroot /compat/linux /usr/bin/env LD_PRELOAD="/path/to/dummy-uvm.so" /path/to/llama-server -m /path/to/your_model.gguf -n 128 -ngl 99 --host Your_Bind_Address --port Your_Port
+```
+
 ## 7. images
 
 ### `nvidia-msi` with FreeBSD and LinuxEmulation
