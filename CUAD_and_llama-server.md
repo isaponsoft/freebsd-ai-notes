@@ -126,3 +126,22 @@ LD_PRELOAD="dummy-uvm.so" ./bin/llama-server \
     -ngl 99 \
     --host 0.0.0.0 --port 11434
 ```
+
+## 7. images
+
+### `nvidia-msi` with FreeBSD and LinuxEmulation
+
+<img width="1297" height="869" alt="20260218-FreeBSD15-CUDA" src="https://github.com/user-attachments/assets/a11fda4d-039f-4ae3-bf13-e21fbd12c6ed" />
+
+### llama-server found "CUDA devices"
+
+<img width="1297" height="781" alt="20260218-FreeBSD15-CUDA3" src="https://github.com/user-attachments/assets/5ed3be4b-81eb-491b-aa74-e84dae56cbd9" />
+
+### llama-server generate tokens.
+
+<img width="1297" height="781" alt="20260218-FreeBSD15-CUDA2" src="https://github.com/user-attachments/assets/996032c2-da41-4106-93d0-0fbda3c65f03" />
+
+
+
+
+#
