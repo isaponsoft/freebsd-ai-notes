@@ -1,0 +1,66 @@
+#!/bin/sh
+
+# PROVIDE: openclaw
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+
+# /etc/rc.conf examples
+# openclaw_profiles="agent-user1 agent-user2"
+# openclaw_enable="YES"
+#
+# openclaw_nagato_enable="YES"
+# openclaw_nagato_owner="agent-user1"
+# openclaw_nagato_args="gateway --port 18789"
+#
+# openclaw_lemarin_enable="YES"
+# openclaw_lemarin_owner="agent-user2"
+# openclaw_lemarin_args="gateway --port 18790"
+
+. /etc/rc.subr
+
+name="openclaw"
+rcvar="openclaw_enable"
+
+load_rc_config "openclaw"
+
+
+# multipe profiles
+if [ -n "$2" ]; then
+    profile="$2"
+    if [ -n "${openclaw_profiles}" ]; then
+        name="${name}_${profile}"
+    fi
+elif [ -n "${openclaw_profiles}" -a -n "$1" ]; then
+    for profile in ${openclaw_profiles}; do
+        /usr/local/etc/rc.d/openclaw "$1" "$profile"
+    done
+    exit 0
+fi
+
+
+# default
+: ${openclaw_enable:="NO"}
+: ${openclaw_owner:="www"}
+: ${openclaw_home:="/home/${openclaw_owner}"}
+: ${openclaw_args:="gateway --port 18789"}
+
+# 
+eval openclaw_owner="\${${name}_owner:-${openclaw_owner}}"
+eval openclaw_args="\${${name}_args:-${openclaw_args}}"
+eval openclaw_home="\${${name}_home:-/home/${openclaw_owner}}"
+
+# Cache directory and PID
+openclaw_cache_dir="${openclaw_home}/.cache/openclaw"
+pidfile="${openclaw_cache_dir}/openclaw.pid"
+child_pidfile="${openclaw_cache_dir}/openclaw_proc.pid"
+
+# Make cache directory
+start_precmd="openclaw_precmd"
+openclaw_precmd() {
+    install -d -o ${openclaw_owner} -m 700 ${openclaw_cache_dir}
+}
+
+command="/usr/sbin/daemon"
+command_args="-S -T openclaw -P ${pidfile} -p ${child_pidfile} -u ${openclaw_owner} /usr/local/bin/openclaw ${openclaw_args}"
+
+run_rc_command "$1"
