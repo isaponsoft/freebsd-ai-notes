@@ -1,0 +1,89 @@
+Here is the English version of the guide. I've polished the technical terminology to match standard FreeBSD and OCI (Open Container Initiative) documentation styles.
+
+---
+
+# Memo: Building Hierarchical Jails (Podman x Native Jail) on FreeBSD 15
+
+## 1. Overview
+
+This guide documents the procedure for creating a "Nested/Hierarchical Jail" structure on a FreeBSD host (**Tamamo**). We run a Podman container (1st layer) and then spawn a native FreeBSD Jail (2nd layer) from within that container.
+
+## 2. Host Preparation (FreeBSD Host)
+
+To avoid importing the massive host OS data (15TB), we import the official minimal base system as a Podman image.
+
+```bash
+# Download and import the minimal base system
+pkg install podman
+fetch https://download.freebsd.org/releases/amd64/15.0-RELEASE/base.txz
+cat base.txz | sudo podman import - freebsd:15-minimal
+
+```
+
+## 3. Launching the 1st Layer (Podman Container)
+
+Run the container in privileged mode and pass the DNS configuration.
+
+```bash
+sudo podman run -it --rm \
+  --name nested-boss \
+  --privileged \
+  -v /etc/resolv.conf:/etc/resolv.conf:ro \
+  freebsd:15-minimal /bin/sh
+
+```
+
+## 4. Injecting Nesting Permissions from the Host
+
+After the container starts, open another terminal on the host (Tamamo) and modify the running Jail's parameters to allow child Jails.
+
+```bash
+# Identify the JID (Jail ID)
+jls
+
+# Grant permissions for nested Jails and mounting (Assuming JID is 20)
+sudo sysctl security.jail.allow_raw_sockets=1
+sudo sysctl security.jail.children_max=10
+sudo jail -m jid=20 \
+  children.max=10 \
+  allow.mount=1 \
+  allow.mount.nullfs=1 \
+  enforce_statfs=1
+
+```
+
+## 5. Spawning the 2nd Layer (Native Jail)
+
+Inside the 1st layer (Podman container), create the nested Jail using its own root filesystem.
+
+```bash
+# Commands executed inside the 1st layer container
+# Spawn the 2nd layer (inner-world)
+jail -c name=recursive_jail path=/ host.hostname=inner-world command=/bin/sh
+
+```
+
+## 6. Verification and Isolation Check
+
+Once inside the 2nd layer, verify that the process space is correctly isolated.
+
+```bash
+# Expected output inside the 2nd layer
+# ps ax
+#  PID TT  STAT    TIME COMMAND
+# 28271  7  SJ     0:00.01 /bin/sh
+# 28272  7  R+J    0:00.00 ps ax
+
+```
+
+---
+
+### Key Technical Insights
+
+* **children.max**: This is the most critical parameter. Without setting this to > 0, any `jail -c` command inside the 1st layer will return `Operation not permitted`.
+* **path=/**: By pointing the child Jail's path to the parent's root, we reuse the existing binaries without needing to copy the 721MB base system again.
+* **STAT 'J'**: The 'J' flag in the `ps` output confirms the process is jailed. In a hierarchical setup, this confirms you are operating within a sub-partition of the kernel's resource pool.
+
+---
+
+This should be a solid reference for your technical blog or `README.md`. **Would you like me to add a troubleshooting section for common network issues (VNET/PF) in nested environments as well?**
