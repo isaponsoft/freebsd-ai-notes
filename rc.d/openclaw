@@ -21,40 +21,47 @@
 name="openclaw"
 rcvar="openclaw_enable"
 
-load_rc_config "openclaw"
+load_rc_config "$name"
 
-
-# multipe profiles
+# プロファイルが指定された場合
 if [ -n "$2" ]; then
     profile="$2"
-    if [ -n "${openclaw_profiles}" ]; then
-        name="${name}_${profile}"
-    fi
-elif [ -n "${openclaw_profiles}" -a -n "$1" ]; then
+    case " ${openclaw_profiles} " in
+        *" ${profile} "*)
+            name="${name}_${profile}"
+            load_rc_config "$name"   # ← ここが重要！再読み込み
+            ;;
+        *)
+            echo "Error: unknown profile '$profile'" >&2
+            exit 1
+            ;;
+    esac
+# プロファイル指定なし & プロファイル定義あり → 全操作
+elif [ -n "${openclaw_profiles}" ]; then
     for profile in ${openclaw_profiles}; do
-        /usr/local/etc/rc.d/openclaw "$1" "$profile"
+        /usr/local/etc/rc.d/openclaw "$1" "${profile}"
     done
     exit 0
 fi
 
 
-# default
+# デフォルト設定
 : ${openclaw_enable:="NO"}
 : ${openclaw_owner:="www"}
 : ${openclaw_home:="/home/${openclaw_owner}"}
 : ${openclaw_args:="gateway --port 18789"}
 
-# 
+# 各プロファイル固有の設定（未定義ならデフォルトを継承）
 eval openclaw_owner="\${${name}_owner:-${openclaw_owner}}"
 eval openclaw_args="\${${name}_args:-${openclaw_args}}"
 eval openclaw_home="\${${name}_home:-/home/${openclaw_owner}}"
 
-# Cache directory and PID
+# キャッシュディレクトリとPID
 openclaw_cache_dir="${openclaw_home}/.cache/openclaw"
 pidfile="${openclaw_cache_dir}/openclaw.pid"
 child_pidfile="${openclaw_cache_dir}/openclaw_proc.pid"
 
-# Make cache directory
+# 起動前にディレクトリを作成
 start_precmd="openclaw_precmd"
 openclaw_precmd() {
     install -d -o ${openclaw_owner} -m 700 ${openclaw_cache_dir}
